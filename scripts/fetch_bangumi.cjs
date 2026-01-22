@@ -5,7 +5,7 @@ const path = require("path");
 // 必填：你的 B 站 UID（纯数字）
 const UID = process.env.BILI_UID || "3546972449409836";
 // 选填：追番列表不公开时需要（浏览器 Cookie 中的 SESSDATA 值）
-const SESSDATA = process.env.BILI_SESSDATA || "";
+const SESSDATA = process.env.BILI_SESSDATA || "14cdd51b%2C1784599308%2C6b507%2A11CjArwlTx6YwWQzb45dAq4vgwB9QD9JHIT_aZ9rcvEYjQCsigA5Rw46syPR2F62bNBykSVjdWTFlzdERyblc5dW53emFjNFpJREdmWWdqem1zUE5VQkNxbFU3a3NGcHNaUnBwRW82aFhoRXEyaFBqaW1YZE83VkZSLUVVekRDdHJaaDdidW5Vc0tBIIEC";
 
 const API_BASE = "https://api.bilibili.com/x/space/bangumi/follow/list";
 const PAGE_SIZE = 30; // B站分页
