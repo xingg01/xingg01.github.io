@@ -25,14 +25,14 @@ const insertAnnouncementComponent = () => {
 
 const getWelcomeInfoElement = () => document.querySelector('#welcome-info');
 
-// 核心修改1：添加ip参数，URL拼接必传的ip查询参数
+
 const fetchIpData = async (ip) => {
   // 校验ip参数（接口必传）
   if (!ip || ip.trim() === '') {
     throw new Error('查询IP不能为空');
   }
   // 拼接ip查询参数，key通过header传递，ip通过query传递
-  const response = await fetch(`https://v1.nsuuu.com/api/ipip/query?ip=${encodeURIComponent(ip)}`, {
+  const response = await fetch(`https://v1.nsuuu.com/api/ipip/?ip=${encodeURIComponent(ip)}`, {
     headers: {
       "Authorization": `Bearer ${IP_CONFIG.API_KEY}`, // key通过header传递
       "Content-Type": "application/json", 
