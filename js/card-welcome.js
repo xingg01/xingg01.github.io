@@ -6,11 +6,11 @@ window.IP_CONFIG = {
 	},
 	CACHE_DURATION: 1000 * 60 * 60, // 可配置缓存时间(默认1小时)
 	HOME_PAGE_ONLY: true, // 是否只在首页显示 开启后其它页面将不会显示这个容器
-	DEFAULT_QUERY_IP: 'auto', // auto=自动获取客户端IP，也可手动指定如'114.114.114.114'
+	DEFAULT_QUERY_IP: 'auto', 
 };
 
 const insertAnnouncementComponent = () => {
-	// 获取所有公告卡片
+	
 	const announcementCards = document.querySelectorAll('.card-widget.card-announcement');
 	if (!announcementCards.length) return;
 
@@ -27,14 +27,14 @@ const getWelcomeInfoElement = () => document.querySelector('#welcome-info');
 
 
 const fetchIpData = async (ip) => {
-  // 校验ip参数（接口必传）
+
   if (!ip || ip.trim() === '') {
     throw new Error('查询IP不能为空');
   }
-  // 拼接ip查询参数，key通过header传递，ip通过query传递
+
   const response = await fetch(`https://v1.nsuuu.com/api/ipip/?ip=${encodeURIComponent(ip)}`, {
     headers: {
-      "Authorization": `Bearer ${IP_CONFIG.API_KEY}`, // key通过header传递
+      "Authorization": `Bearer ${IP_CONFIG.API_KEY}`, 
       "Content-Type": "application/json", 
     },
     method: "GET", 
@@ -43,7 +43,7 @@ const fetchIpData = async (ip) => {
   return await response.json();
 };
 
-// 新增：自动获取客户端IP（备用方案，若接口不支持auto时使用）
+
 const getClientIp = async () => {
   try {
     const res = await fetch('https://api.ipify.org?format=json');
@@ -52,7 +52,7 @@ const getClientIp = async () => {
     return data.ip;
   } catch (err) {
     console.error('自动获取IP失败，使用默认IP:', err);
-    return '127.0.0.1'; // 降级默认值
+    return '127.0.0.1';
   }
 };
 
@@ -220,7 +220,6 @@ const showLoadingSpinner = () => {
 	welcomeInfoElement.innerHTML = '<div class="loading-spinner"></div>';
 };
 
-// 核心修改2：缓存Key关联IP，避免不同IP共用缓存
 const getIpCacheKey = (ip) => `ip_info_cache_${ip}`;
 const getIpInfoFromCache = (ip) => {
 	const cacheKey = getIpCacheKey(ip);
@@ -242,7 +241,7 @@ const setIpInfoCache = (ip, data) => {
 	}));
 };
 
-// 核心修改3：调整fetchIpInfo逻辑，先确定要查询的IP，再传递给fetchIpData
+
 const fetchIpInfo = async (customIp) => {
 	if (!checkLocationPermission()) {
 		showLocationPermissionDialog();
@@ -251,13 +250,13 @@ const fetchIpInfo = async (customIp) => {
 
 	showLoadingSpinner();
 
-	// 确定要查询的IP：优先使用自定义IP → 配置的默认IP → 自动获取客户端IP
+	
 	let queryIp = customIp || IP_CONFIG.DEFAULT_QUERY_IP;
 	if (queryIp === 'auto') {
-		queryIp = await getClientIp(); // 自动获取客户端真实IP
+		queryIp = await getClientIp(); 
 	}
 
-	// 从缓存读取对应IP的信息
+	
 	const cachedData = getIpInfoFromCache(queryIp);
 	if (cachedData) {
 		showWelcome(cachedData);
@@ -265,9 +264,9 @@ const fetchIpInfo = async (customIp) => {
 	}
 
 	try {
-		// 传递ip参数给fetchIpData
+		
 		const data = await fetchIpData(queryIp);
-		// 给返回数据补充ip字段（用于页面显示）
+		
 		const result = { ...data, ip: queryIp };
 		setIpInfoCache(queryIp, result);
 		showWelcome(result);
