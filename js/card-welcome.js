@@ -1,11 +1,12 @@
 window.IP_CONFIG = {
-	API_KEY: 'oXfGsYkOixpnllhjQj6daTvMWV', // API密钥 申请地址：https://api.76.al/
+	API_KEY: 'a8395f4393d1e4e6', // API密钥 申请地址：https://api.76.al/
 	BLOG_LOCATION: {
 		lng: 112.673907, // 经度
 		lat: 26.885943 // 纬度
 	},
 	CACHE_DURATION: 1000 * 60 * 60, // 可配置缓存时间(默认1小时)
 	HOME_PAGE_ONLY: true, // 是否只在首页显示 开启后其它页面将不会显示这个容器
+	DEFAULT_QUERY_IP: 'auto', // auto=自动获取客户端IP，也可手动指定如'114.114.114.114'
 };
 
 const insertAnnouncementComponent = () => {
@@ -24,10 +25,35 @@ const insertAnnouncementComponent = () => {
 
 const getWelcomeInfoElement = () => document.querySelector('#welcome-info');
 
-const fetchIpData = async () => {
-	const response = await fetch(`https://v1.nsuuu.com/api/ipip/query?key=${encodeURIComponent(IP_CONFIG.API_KEY)}`);
-	if (!response.ok) throw new Error('网络响应不正常');
-	return await response.json();
+// 核心修改1：添加ip参数，URL拼接必传的ip查询参数
+const fetchIpData = async (ip) => {
+  // 校验ip参数（接口必传）
+  if (!ip || ip.trim() === '') {
+    throw new Error('查询IP不能为空');
+  }
+  // 拼接ip查询参数，key通过header传递，ip通过query传递
+  const response = await fetch(`https://v1.nsuuu.com/api/ipip/query?ip=${encodeURIComponent(ip)}`, {
+    headers: {
+      "Authorization": `Bearer ${IP_CONFIG.API_KEY}`, // key通过header传递
+      "Content-Type": "application/json", 
+    },
+    method: "GET", 
+  });
+  if (!response.ok) throw new Error(`网络响应不正常：${response.status}`);
+  return await response.json();
+};
+
+// 新增：自动获取客户端IP（备用方案，若接口不支持auto时使用）
+const getClientIp = async () => {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    if (!res.ok) throw new Error('获取客户端IP失败');
+    const data = await res.json();
+    return data.ip;
+  } catch (err) {
+    console.error('自动获取IP失败，使用默认IP:', err);
+    return '127.0.0.1'; // 降级默认值
+  }
 };
 
 const showWelcome = ({
@@ -194,26 +220,30 @@ const showLoadingSpinner = () => {
 	welcomeInfoElement.innerHTML = '<div class="loading-spinner"></div>';
 };
 
-const IP_CACHE_KEY = 'ip_info_cache';
-const getIpInfoFromCache = () => {
-	const cached = localStorage.getItem(IP_CACHE_KEY);
+// 核心修改2：缓存Key关联IP，避免不同IP共用缓存
+const getIpCacheKey = (ip) => `ip_info_cache_${ip}`;
+const getIpInfoFromCache = (ip) => {
+	const cacheKey = getIpCacheKey(ip);
+	const cached = localStorage.getItem(cacheKey);
 	if (!cached) return null;
 
 	const { data, timestamp } = JSON.parse(cached);
 	if (Date.now() - timestamp > IP_CONFIG.CACHE_DURATION) {
-		localStorage.removeItem(IP_CACHE_KEY);
+		localStorage.removeItem(cacheKey);
 		return null;
 	}
 	return data;
 };
-const setIpInfoCache = (data) => {
-	localStorage.setItem(IP_CACHE_KEY, JSON.stringify({
+const setIpInfoCache = (ip, data) => {
+	const cacheKey = getIpCacheKey(ip);
+	localStorage.setItem(cacheKey, JSON.stringify({
 		data,
 		timestamp: Date.now()
 	}));
 };
 
-const fetchIpInfo = async () => {
+// 核心修改3：调整fetchIpInfo逻辑，先确定要查询的IP，再传递给fetchIpData
+const fetchIpInfo = async (customIp) => {
 	if (!checkLocationPermission()) {
 		showLocationPermissionDialog();
 		return;
@@ -221,19 +251,29 @@ const fetchIpInfo = async () => {
 
 	showLoadingSpinner();
 
-	const cachedData = getIpInfoFromCache();
+	// 确定要查询的IP：优先使用自定义IP → 配置的默认IP → 自动获取客户端IP
+	let queryIp = customIp || IP_CONFIG.DEFAULT_QUERY_IP;
+	if (queryIp === 'auto') {
+		queryIp = await getClientIp(); // 自动获取客户端真实IP
+	}
+
+	// 从缓存读取对应IP的信息
+	const cachedData = getIpInfoFromCache(queryIp);
 	if (cachedData) {
 		showWelcome(cachedData);
 		return;
 	}
 
 	try {
-		const data = await fetchIpData();
-		setIpInfoCache(data);
-		showWelcome(data);
+		// 传递ip参数给fetchIpData
+		const data = await fetchIpData(queryIp);
+		// 给返回数据补充ip字段（用于页面显示）
+		const result = { ...data, ip: queryIp };
+		setIpInfoCache(queryIp, result);
+		showWelcome(result);
 	} catch (error) {
 		console.error('获取IP信息失败:', error);
-		showErrorMessage();
+		showErrorMessage(`获取IP信息失败：${error.message}`);
 	}
 };
 
